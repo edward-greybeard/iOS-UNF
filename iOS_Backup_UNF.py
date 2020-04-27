@@ -9,6 +9,7 @@ import logging
 import os
 from dataclasses import dataclass
 from sys import exit
+from shutil import copyfile
 
 logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level='DEBUG')
 
@@ -52,7 +53,7 @@ def get_file_list(manifest_path):
                                  is_dir=is_dir)
         file_list[backup_file.file_id] = backup_file
 
-    logging.debug(f'SQL complete. {len(file_list)} files found and objects added.')
+    logging.debug(f'SQL complete. {len(file_list)} entries found and objects added.')
     mani_conn.close()
     return file_list
 
@@ -70,6 +71,8 @@ def process_file_list(input_root, output_root, file_list):
         # logging.debug(f"{backup_id}: {backup_file.relative_path}")
         if backup_file.is_dir:
             create_directory(backup_file, output_root)
+        else:
+            create_file(backup_file, input_root, output_root)
 
 
 def create_directory(backup_file, output_root):
@@ -79,25 +82,53 @@ def create_directory(backup_file, output_root):
     :param output_root: Output directory root
     :return:
     """
-    dir_path = get_full_path(backup_file)
-    full_output_path = os.path.join(output_root, dir_path)
+    full_output_path = get_output_path(backup_file, output_root)
     # logging.debug(f"{full_output_path}")
     os.makedirs(full_output_path, exist_ok=True)
 
 
-def get_full_path(backup_file):
+def create_file(backup_file, input_root, output_root):
+    """
+    Creates a file in our output folder, copied from our input folder.
+    :param backup_file: BackupFile object
+    :param input_root: Input directory root
+    :param output_root: Output directory root
+    :return:
+    """
+    input_path = get_input_path(backup_file, input_root)
+    output_path = get_output_path(backup_file, output_root)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    copyfile(input_path, output_path)
+
+
+def get_input_path(backup_file, input_root):
+    """
+    Gets our input path.
+    :param backup_file: BackupFile object
+    :param input_root: Input directory root
+    :return:
+    """
+    sub_folder = backup_file.file_id[:2]
+    full_input_path = os.path.join(input_root, sub_folder, backup_file.file_id)
+    return os.path.normpath(full_input_path)
+
+
+def get_output_path(backup_file, output_root):
     """
     Generates for us a full path for our data
     :param backup_file: BackupFile object
+    :param output_root: Output directory root
     :return:
     """
+
     try:
         major_dom, minor_dom = backup_file.domain.split("-", 1)
         domain_subdir = os.path.join(major_dom, minor_dom)
     except ValueError:
-        # logging.debug(backup_file.domain)
         domain_subdir = backup_file.domain
-    return os.path.join(domain_subdir, backup_file.relative_path)
+    dir_path = os.path.join(domain_subdir, backup_file.relative_path)
+    full_output_path = os.path.join(output_root, dir_path)
+    return os.path.normpath(full_output_path)
 
 
 if __name__ == '__main__':
@@ -132,3 +163,4 @@ if __name__ == '__main__':
 
     logging.info("Beginning File Conversion..")
     process_file_list(input_dir, output_dir, file_list)
+    logging.info("Complete. Exiting..")
