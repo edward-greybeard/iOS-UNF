@@ -29,7 +29,7 @@ class BackupFile:
 
 def get_file_list(manifest_path):
     """
-    Returns a dict of {'id': 'file name'..} from manifest.db.
+    Returns a dict of {'id': BackupFile..} from manifest.db.
     :param manifest_path: Path to the manifest.db file
     :return:
     """
