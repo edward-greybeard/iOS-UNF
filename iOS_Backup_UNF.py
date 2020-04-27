@@ -12,6 +12,9 @@ from sys import exit
 
 logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level='DEBUG')
 
+# TODO: Add option to input a zipfile
+# TODO: Add option to output straight to zipfile
+
 
 @dataclass
 class BackupFile:
@@ -26,7 +29,7 @@ class BackupFile:
 def get_file_list(manifest_path):
     """
     Returns a dict of {'id': 'file name'..} from manifest.db.
-    :param manifest_db_path:
+    :param manifest_path: Path to the manifest.db file
     :return:
     """
     mani_conn = sqlite3.connect(manifest_path)
@@ -58,7 +61,9 @@ def process_file_list(input_root, output_root, file_list):
     """
     For each file, reads the file content then writes to a new file in the right "path".
     v1: use domain as top level folder.
-    :param output_path:
+    :param input_root: Input directory
+    :param output_root: Output directory
+    :param file_list: Dict of BackupFile objects
     :return:
     """
     for backup_id, backup_file in file_list.items():
@@ -70,22 +75,30 @@ def process_file_list(input_root, output_root, file_list):
 def create_directory(backup_file, output_root):
     """
     Creates a directory
-    :param backup_file:
-    :param output_root:
+    :param backup_file: BackupFile object
+    :param output_root: Output directory root
     :return:
     """
     dir_path = get_full_path(backup_file)
     full_output_path = os.path.join(output_root, dir_path)
-    logging.debug(f"{full_output_path}")
+    # logging.debug(f"{full_output_path}")
     os.makedirs(full_output_path, exist_ok=True)
+
 
 def get_full_path(backup_file):
     """
     Generates for us a full path for our data
-    :param backup_file:
+    :param backup_file: BackupFile object
     :return:
     """
-    return os.path.join(backup_file.domain, backup_file.relative_path)
+    try:
+        major_dom, minor_dom = backup_file.domain.split("-", 1)
+        domain_subdir = os.path.join(major_dom, minor_dom)
+    except ValueError:
+        # logging.debug(backup_file.domain)
+        domain_subdir = backup_file.domain
+    return os.path.join(domain_subdir, backup_file.relative_path)
+
 
 if __name__ == '__main__':
     logging.info("-------------------")
