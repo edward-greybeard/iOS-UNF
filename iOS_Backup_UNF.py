@@ -16,6 +16,31 @@ logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level='D
 # TODO: Add option to input a zipfile
 # TODO: Add option to output straight to zipfile
 
+domain_translation = {
+    "AppDomain": "private\\var\\mobile\\Containers\\Data\\Application",
+    "AppDomainGroup": "private\\var\\mobile\\Containers\\Shared\\AppGroup",
+    "AppDomainPlugin": "private\\var\\mobile\\Containers\\Data\\PluginKitPlugin",
+    "SysContainerDomain": "private\\var\\containers\\Data\\System",
+    "SysSharedContainerDomain": "private\\var\\containers\\Shared\\SystemGroup",
+    "KeychainDomain": "private\\var\\Keychains",
+    "CameraRollDomain": "private\\var\\mobile",
+    "MobileDeviceDomain": "private\\var\\MobileDevice",
+    "WirelessDomain": "private\\var\\wireless",
+    "InstallDomain": "private\\var\\installd",
+    "KeyboardDomain": "private\\var\\mobile",
+    "HomeDomain": "private\\var\\mobile",
+    "SystemPreferencesDomain": "private\\var\\preferences",
+    "DatabaseDomain": "private\\var\\db",
+    "TonesDomain": "private\\var\\mobile",
+    "RootDomain": "private\\var\\root",
+    "BooksDomain": "private\\var\\mobile\\Media\\Books",
+    "ManagedPreferencesDomain": "private\\var\\Managed Preferences",
+    "HomeKitDomain": "private\\var\\mobile",
+    "MediaDomain": "private\\var\\mobile",
+    "HealthDomain": "private\\var\\mobile\\Library",
+
+}
+
 
 @dataclass
 class BackupFile:
@@ -38,7 +63,12 @@ def get_file_list(manifest_path):
     logging.debug('Connected to manifest.db')
     sql = 'select fileID, domain, relativePath, file, flags from Files'
     logging.debug('Connected OK. Running SQL..')
-    cur.execute(sql)
+    try:
+        cur.execute(sql)
+    except sqlite3.DatabaseError:
+        logging.critical("Manifest.db is not a sqlite database; possibly encrypted.")
+        logging.info("Exiting..")
+        exit(1)
 
     file_list = {}
     for file_info in cur.fetchall():
@@ -97,6 +127,7 @@ def create_file(backup_file, input_root, output_root):
     """
     input_path = get_input_path(backup_file, input_root)
     output_path = get_output_path(backup_file, output_root)
+    logging.debug(output_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     copyfile(input_path, output_path)
 
@@ -120,12 +151,21 @@ def get_output_path(backup_file, output_root):
     :param output_root: Output directory root
     :return:
     """
-
+    # TODO refactor this mess
+    global domain_translation
     try:
-        major_dom, minor_dom = backup_file.domain.split("-", 1)
-        domain_subdir = os.path.join(major_dom, minor_dom)
+        major_domain = backup_file.domain.split("-", 1)[0]
     except ValueError:
-        domain_subdir = backup_file.domain
+        major_domain = backup_file.domain
+    if major_domain in domain_translation:
+        domain_subdir = domain_translation[major_domain]
+    else:
+        try:
+            minor_domain = backup_file.domain.split("-", 1)[1]
+            domain_subdir = os.path.join(major_domain, minor_domain)
+        except ValueError:
+            domain_subdir = backup_file.domain
+
     dir_path = os.path.join(domain_subdir, backup_file.relative_path)
     full_output_path = os.path.join(output_root, dir_path)
     return os.path.normpath(full_output_path)
