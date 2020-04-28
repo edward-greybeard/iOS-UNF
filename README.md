@@ -16,7 +16,7 @@ optional arguments:
 
 ```
 ## Some things to note
-The manfiest.db file does not contain a fully qualified path - instead, it defines a _Domain_ and a relative path - for example, it might list 'MediaDomain' and a relative path of 'Media/Recordings/Recordings.db'.
+The manifest.db file does not contain a fully qualified path - instead, it defines a _Domain_ and a relative path - for example, it might list 'MediaDomain' and a relative path of 'Media/Recordings/Recordings.db'.
 
 ### Known Domains
 iDevices list the root path of most of these domains in '/System/Library/Backup/Domains.plist'. This file isn't backed up by default, but the mappings it defines (and the ones this script uses) are as follows:
