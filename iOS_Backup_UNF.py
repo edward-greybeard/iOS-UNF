@@ -52,6 +52,10 @@ class BackupFile:
     is_dir: bool
     # TODO: timestamps pls
 
+    def get_mod_time(self):
+        file_meta_plist = plistlib.loads(self.file_meta)
+        return file_meta_plist['modified']
+
     def translated_path(self):
         global domain_translation
 
