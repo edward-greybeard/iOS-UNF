@@ -37,8 +37,7 @@ domain_translation = {
     "ManagedPreferencesDomain": "private\\var\\Managed Preferences",
     "HomeKitDomain": "private\\var\\mobile",
     "MediaDomain": "private\\var\\mobile",
-    "HealthDomain": "private\\var\\mobile\\Library",
-
+    "HealthDomain": "private\\var\\mobile\\Library"
 }
 
 
@@ -127,7 +126,6 @@ def create_file(backup_file, input_root, output_root):
     """
     input_path = get_input_path(backup_file, input_root)
     output_path = get_output_path(backup_file, output_root)
-    logging.debug(output_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     copyfile(input_path, output_path)
 
@@ -139,6 +137,7 @@ def get_input_path(backup_file, input_root):
     :param input_root: Input directory root
     :return:
     """
+    # TODO check for existence of file - in both subfolder and input folder
     sub_folder = backup_file.file_id[:2]
     full_input_path = os.path.join(input_root, sub_folder, backup_file.file_id)
     return os.path.normpath(full_input_path)
@@ -153,21 +152,21 @@ def get_output_path(backup_file, output_root):
     """
     # TODO refactor this mess
     global domain_translation
+
     try:
-        major_domain = backup_file.domain.split("-", 1)[0]
+        domain, package_name = backup_file.domain.split("-", 1)
     except ValueError:
-        major_domain = backup_file.domain
-    if major_domain in domain_translation:
-        domain_subdir = domain_translation[major_domain]
+        domain = backup_file.domain
+        package_name = ""
+
+    if domain in domain_translation:
+        domain_subdir = os.path.join(domain_translation[domain], package_name)
     else:
-        try:
-            minor_domain = backup_file.domain.split("-", 1)[1]
-            domain_subdir = os.path.join(major_domain, minor_domain)
-        except ValueError:
-            domain_subdir = backup_file.domain
+        domain_subdir = os.path.join(domain, package_name)
 
     dir_path = os.path.join(domain_subdir, backup_file.relative_path)
     full_output_path = os.path.join(output_root, dir_path)
+
     return os.path.normpath(full_output_path)
 
 
