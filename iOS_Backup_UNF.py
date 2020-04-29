@@ -3,10 +3,12 @@
 # Assumes presence of manifest.db, and uses the files present in 'Files' table to determine path.
 # Also an example of dataclasses, F-strings, logging and argparse, whew
 
+import plistlib
 import sqlite3
 import argparse
 import logging
 import os
+import zipfile
 from dataclasses import dataclass
 from sys import exit
 from shutil import copyfile
@@ -49,6 +51,24 @@ class BackupFile:
     file_meta: str
     is_dir: bool
     # TODO: timestamps pls
+
+    def translated_path(self):
+        global domain_translation
+
+        try:
+            domain, package_name = self.domain.split("-", 1)
+        except ValueError:
+            domain = self.domain
+            package_name = ""
+
+        if domain in domain_translation:
+            domain_subdir = os.path.join(domain_translation[domain], package_name)
+        else:
+            domain_subdir = os.path.join(domain, package_name)
+
+        true_path = os.path.join(domain_subdir, self.relative_path)
+
+        return os.path.normpath(true_path)
 
 
 def get_file_list(manifest_path):
@@ -154,6 +174,7 @@ def get_input_path(backup_file, input_root):
     # Otherwise we have no file!
     return None
 
+
 def get_output_path(backup_file, output_root):
     """
     Generates for us a full path for our data
@@ -161,22 +182,8 @@ def get_output_path(backup_file, output_root):
     :param output_root: Output directory root
     :return:
     """
-    global domain_translation
-
-    try:
-        domain, package_name = backup_file.domain.split("-", 1)
-    except ValueError:
-        domain = backup_file.domain
-        package_name = ""
-
-    if domain in domain_translation:
-        domain_subdir = os.path.join(domain_translation[domain], package_name)
-    else:
-        domain_subdir = os.path.join(domain, package_name)
-
-    dir_path = os.path.join(domain_subdir, backup_file.relative_path)
+    dir_path = backup_file.translated_path()
     full_output_path = os.path.join(output_root, dir_path)
-
     return os.path.normpath(full_output_path)
 
 
