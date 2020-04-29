@@ -125,6 +125,9 @@ def create_file(backup_file, input_root, output_root):
     :return:
     """
     input_path = get_input_path(backup_file, input_root)
+    if input_path is None:
+        logging.warning(f"Missing file: {backup_file.file_id} ({backup_file.relative_path})")
+        return 0
     output_path = get_output_path(backup_file, output_root)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     copyfile(input_path, output_path)
@@ -137,11 +140,19 @@ def get_input_path(backup_file, input_root):
     :param input_root: Input directory root
     :return:
     """
-    # TODO check for existence of file - in both subfolder and input folder
+    # Case where backup files are in the same folder as manifest.db
+    full_input_path = os.path.join(input_root, backup_file.file_id)
+    if os.path.exists(full_input_path):
+        return os.path.normpath(full_input_path)
+
+    # Case where backup files exist in subdirectories
     sub_folder = backup_file.file_id[:2]
     full_input_path = os.path.join(input_root, sub_folder, backup_file.file_id)
-    return os.path.normpath(full_input_path)
+    if os.path.exists(full_input_path):
+        return os.path.normpath(full_input_path)
 
+    # Otherwise we have no file!
+    return None
 
 def get_output_path(backup_file, output_root):
     """
