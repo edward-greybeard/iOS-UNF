@@ -75,7 +75,11 @@ class BackupFile:
         :return:
         """
         file_meta_plist = plistlib.loads(self.file_meta)
-        return file_meta_plist['modified'].timetuple()
+        try:
+            return file_meta_plist['modified'].timetuple()
+        except KeyError:
+            logging.warning(f"No time for id: {self.file_id} ({self.relative_path})")
+            return (1980, 1, 1, 1, 1, 1)
 
     def get_size(self):
         """
@@ -83,7 +87,11 @@ class BackupFile:
         :return:
         """
         file_meta_plist = plistlib.loads(self.file_meta)
-        return file_meta_plist['size']
+        try:
+            return file_meta_plist['size']
+        except KeyError:
+            logging.warning(f"No size for id: {self.file_id} ({self.relative_path})")
+            return 0
 
     def get_zipinfo(self):
         """
@@ -95,7 +103,6 @@ class BackupFile:
         zipinfo.date_time = self.get_mod_time()
         zipinfo.file_size = self.get_size()
         return zipinfo
-
 
 
 def get_file_list(manifest_path):
@@ -159,12 +166,16 @@ def process_into_zip(input_root, output_root, file_list):
     :param file_list:
     :return:
     """
-    output_path = os.path.join(output_root, "UNF_Backup,.zip")
+    output_path = os.path.join(output_root, "UNF_Backup.zip")
     new_zip = zipfile.ZipFile(output_path, "w")
     for backup_id, backup_file in file_list.items():
         if backup_file.is_dir is not True:
             zinfo = backup_file.get_zipinfo()
             data = get_file_data(backup_file, input_root)
+            if data == 0:
+                continue
+            if zinfo.file_size == 0:
+                zinfo.file_size = len(data)
             new_zip.writestr(zinfo, data)
 
     new_zip.close()
@@ -256,14 +267,18 @@ if __name__ == '__main__':
     logging.info("-------------------")
 
     parser = argparse.ArgumentParser(description="Unpack iOS backups")
+    parser.add_argument('-z', '--zip', dest='to_zip', default=False, action="store_true",
+                        help='Output to zip')
     parser.add_argument('-i', '--input', dest='input_dir', type=str, required=True, action='store',
                         help='Input directory')
     parser.add_argument('-o', '--output', dest='output_dir', type=str, default=".\\",
                         help='Output directory (default: current directory)')
+
     args = parser.parse_args()
 
     input_dir = args.input_dir
     output_dir = args.output_dir
+    to_zip = args.to_zip
 
     logging.info(f"Input Dir:  {input_dir}")
     logging.info(f"Output Dir: {output_dir}")
@@ -279,7 +294,13 @@ if __name__ == '__main__':
 
     logging.info(f"{len(file_list)} entries found in manifest.db")
 
-    logging.info("Beginning File Conversion..")
-    # process_file_list(input_dir, output_dir, file_list)
-    process_into_zip(input_dir, output_dir, file_list)
-    logging.info("Complete. Exiting..")
+    if to_zip is True:
+        logging.info("Exporting to zip file..")
+        logging.info("Beginning File Conversion..")
+        process_into_zip(input_dir, output_dir, file_list)
+        logging.info("Complete. Exiting..")
+    else:
+        logging.info("Exporting to filesystem..")
+        logging.info("Beginning File Conversion..")
+        process_file_list(input_dir, output_dir, file_list)
+        logging.info("Complete. Exiting..")
