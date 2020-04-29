@@ -16,9 +16,9 @@ from shutil import copyfile
 logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level='DEBUG')
 
 # TODO: Add option to input a zipfile
-# TODO: Add option to output straight to zipfile
+# TODO: Better handling of bplists in "file_meta"
 
-domain_translation = {
+DOMAIN_TRANSLATION = {
     "AppDomain": "private\\var\\mobile\\Containers\\Data\\Application",
     "AppDomainGroup": "private\\var\\mobile\\Containers\\Shared\\AppGroup",
     "AppDomainPlugin": "private\\var\\mobile\\Containers\\Data\\PluginKitPlugin",
@@ -52,7 +52,7 @@ class BackupFile:
     is_dir: bool
 
     def translated_path(self):
-        global domain_translation
+        global DOMAIN_TRANSLATION
 
         try:
             domain, package_name = self.domain.split("-", 1)
@@ -60,8 +60,8 @@ class BackupFile:
             domain = self.domain
             package_name = ""
 
-        if domain in domain_translation:
-            domain_subdir = os.path.join(domain_translation[domain], package_name)
+        if domain in DOMAIN_TRANSLATION:
+            domain_subdir = os.path.join(DOMAIN_TRANSLATION[domain], package_name)
         else:
             domain_subdir = os.path.join(domain, package_name)
 
@@ -251,7 +251,6 @@ def get_file_data(backup_file, input_root):
     :param input_root:
     :return:
     """
-    file_data = ""
     input_path = get_input_path(backup_file, input_root)
     if input_path is None:
         logging.warning(f"Missing file: {backup_file.file_id} ({backup_file.relative_path})")
@@ -259,6 +258,7 @@ def get_file_data(backup_file, input_root):
     file_data = open(input_path, 'rb').read()
 
     return file_data
+
 
 if __name__ == '__main__':
     logging.info("-------------------")
