@@ -19,7 +19,6 @@ from shutil import copyfile
 logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level='DEBUG')
 
 # TODO: Add option to input a zipfile
-# TODO: Better handling of bplists in "file_meta"
 
 DOMAIN_TRANSLATION = {
     "AppDomain": "private\\var\\mobile\\Containers\\Data\\Application",
@@ -51,7 +50,7 @@ class BackupFile:
     file_id: str
     domain: str
     relative_path: str
-    file_meta: str
+    file_meta: bytes
     is_dir: bool
 
     def translated_path(self):
@@ -77,7 +76,7 @@ class BackupFile:
         Reads file_meta plist and returns modified date
         :return:
         """
-        if type(self.file_meta == bytes):
+        if self.file_meta[:2] == b'bp':
             file_meta_plist = ccl_bplist.load(BytesIO(self.file_meta))
             raw_date_time = file_meta_plist['$objects'][1]['LastModified']
             converted_time = datetime.datetime.fromtimestamp(raw_date_time)
@@ -92,7 +91,7 @@ class BackupFile:
         Reads file_meta plist and returns reported file size
         :return:
         """
-        if type(self.file_meta == bytes):
+        if self.file_meta[:2] == b'bp':
             file_meta_plist = ccl_bplist.load(BytesIO(self.file_meta))
             size = file_meta_plist['$objects'][1]['Size']
             return size
