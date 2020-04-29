@@ -150,7 +150,6 @@ def get_output_path(backup_file, output_root):
     :param output_root: Output directory root
     :return:
     """
-    # TODO refactor this mess
     global domain_translation
 
     try:
