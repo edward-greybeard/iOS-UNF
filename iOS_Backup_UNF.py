@@ -9,6 +9,9 @@ import argparse
 import logging
 import os
 import zipfile
+import datetime
+import ccl_bplist
+from io import BytesIO
 from dataclasses import dataclass
 from sys import exit
 from shutil import copyfile
@@ -74,24 +77,28 @@ class BackupFile:
         Reads file_meta plist and returns modified date
         :return:
         """
-        file_meta_plist = plistlib.loads(self.file_meta)
-        try:
+        if type(self.file_meta == bytes):
+            file_meta_plist = ccl_bplist.load(BytesIO(self.file_meta))
+            raw_date_time = file_meta_plist['$objects'][1]['LastModified']
+            converted_time = datetime.datetime.fromtimestamp(raw_date_time)
+            converted_time = converted_time.timetuple()
+            return converted_time
+        else:
+            file_meta_plist = plistlib.loads(self.file_meta)
             return file_meta_plist['modified'].timetuple()
-        except KeyError:
-            logging.warning(f"No time for id: {self.file_id} ({self.relative_path})")
-            return (1980, 1, 1, 1, 1, 1)
 
     def get_size(self):
         """
         Reads file_meta plist and returns reported file size
         :return:
         """
-        file_meta_plist = plistlib.loads(self.file_meta)
-        try:
+        if type(self.file_meta == bytes):
+            file_meta_plist = ccl_bplist.load(BytesIO(self.file_meta))
+            size = file_meta_plist['$objects'][1]['Size']
+            return size
+        else:
+            file_meta_plist = plistlib.loads(self.file_meta)
             return file_meta_plist['size']
-        except KeyError:
-            logging.warning(f"No size for id: {self.file_id} ({self.relative_path})")
-            return 0
 
     def get_zipinfo(self):
         """
@@ -172,12 +179,11 @@ def process_into_zip(input_root, output_root, file_list):
         if backup_file.is_dir is not True:
             zinfo = backup_file.get_zipinfo()
             data = get_file_data(backup_file, input_root)
-            if data == 0:
+            if data is None:
+                logging.warning(f"Unable to find data: {backup_file.file_id} ({backup_file.relative_path})")
                 continue
-            if zinfo.file_size == 0:
-                zinfo.file_size = len(data)
-            new_zip.writestr(zinfo, data)
-
+            else:
+                new_zip.writestr(zinfo, data)
     new_zip.close()
 
 
@@ -254,7 +260,7 @@ def get_file_data(backup_file, input_root):
     input_path = get_input_path(backup_file, input_root)
     if input_path is None:
         logging.warning(f"Missing file: {backup_file.file_id} ({backup_file.relative_path})")
-        return 0
+        return None
     file_data = open(input_path, 'rb').read()
 
     return file_data
