@@ -50,11 +50,6 @@ class BackupFile:
     relative_path: str
     file_meta: str
     is_dir: bool
-    # TODO: timestamps pls
-
-    def get_mod_time(self):
-        file_meta_plist = plistlib.loads(self.file_meta)
-        return file_meta_plist['modified']
 
     def translated_path(self):
         global domain_translation
@@ -73,6 +68,34 @@ class BackupFile:
         true_path = os.path.join(domain_subdir, self.relative_path)
 
         return os.path.normpath(true_path)
+
+    def get_mod_time(self):
+        """
+        Reads file_meta plist and returns modified date
+        :return:
+        """
+        file_meta_plist = plistlib.loads(self.file_meta)
+        return file_meta_plist['modified'].timetuple()
+
+    def get_size(self):
+        """
+        Reads file_meta plist and returns reported file size
+        :return:
+        """
+        file_meta_plist = plistlib.loads(self.file_meta)
+        return file_meta_plist['size']
+
+    def get_zipinfo(self):
+        """
+        Generates and returns a zipinfo object. Used for zipfile output.
+        :return:
+        """
+        zipinfo = zipfile.ZipInfo()
+        zipinfo.filename = self.translated_path()
+        zipinfo.date_time = self.get_mod_time()
+        zipinfo.file_size = self.get_size()
+        return zipinfo
+
 
 
 def get_file_list(manifest_path):
@@ -126,6 +149,25 @@ def process_file_list(input_root, output_root, file_list):
             create_directory(backup_file, output_root)
         else:
             create_file(backup_file, input_root, output_root)
+
+
+def process_into_zip(input_root, output_root, file_list):
+    """
+    Creates a zip file in the root of output_root and writes all data into it.
+    :param input_root:
+    :param output_root:
+    :param file_list:
+    :return:
+    """
+    output_path = os.path.join(output_root, "UNF_Backup,.zip")
+    new_zip = zipfile.ZipFile(output_path, "w")
+    for backup_id, backup_file in file_list.items():
+        if backup_file.is_dir is not True:
+            zinfo = backup_file.get_zipinfo()
+            data = get_file_data(backup_file, input_root)
+            new_zip.writestr(zinfo, data)
+
+    new_zip.close()
 
 
 def create_directory(backup_file, output_root):
@@ -191,6 +233,22 @@ def get_output_path(backup_file, output_root):
     return os.path.normpath(full_output_path)
 
 
+def get_file_data(backup_file, input_root):
+    """
+    Returns file data
+    :param backup_file:
+    :param input_root:
+    :return:
+    """
+    file_data = ""
+    input_path = get_input_path(backup_file, input_root)
+    if input_path is None:
+        logging.warning(f"Missing file: {backup_file.file_id} ({backup_file.relative_path})")
+        return 0
+    file_data = open(input_path, 'rb').read()
+
+    return file_data
+
 if __name__ == '__main__':
     logging.info("-------------------")
     logging.info("iOS Backup UnFunker")
@@ -222,5 +280,6 @@ if __name__ == '__main__':
     logging.info(f"{len(file_list)} entries found in manifest.db")
 
     logging.info("Beginning File Conversion..")
-    process_file_list(input_dir, output_dir, file_list)
+    # process_file_list(input_dir, output_dir, file_list)
+    process_into_zip(input_dir, output_dir, file_list)
     logging.info("Complete. Exiting..")
