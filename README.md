@@ -60,4 +60,5 @@ I've taken the courtesy of prefixing the path with "/private/", just like it wou
  - *Can it decrypt backups?* No it cannot.
  - *Is this like a full filesystem?* No it isn't. It doesn't magically add files, it just restores them to their proper filepath.
  - *Why do this?* Some examiners prefer to be able to resolve the content back to the actual file name and path. Also, some tools seem to prefer the reconstructed output and pull more artefacts out. Weird, huh.
- - *<Insert vendor tool here> does this already, why bother with this?* It's free and I thought it would be fun (it was).
+ - ```<Insert vendor tool here>``` does this already, why bother with this?* It's free and I thought it would be fun (it was).
+ - UNFunker? UNFunker.
