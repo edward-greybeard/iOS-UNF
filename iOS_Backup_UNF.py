@@ -290,9 +290,10 @@ if __name__ == '__main__':
     logging.info(f"Input Dir:  {str(input_dir)}")
     logging.info(f"Output Dir: {str(output_dir)}")
 
-    manifest_path = input_dir / 'manifest.db'
+    manifest_path = next(input_dir.glob('[Mm]anifest.db'), None)
 
-    if not manifest_path.exists():
+    if (manifest_path is None or
+            not manifest_path.exists()):
         logging.critical(f"Cannot find manifest.db at: {str(manifest_path)}")
         logging.info("Exiting..")
         exit(1)
