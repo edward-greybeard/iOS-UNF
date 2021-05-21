@@ -128,7 +128,7 @@ def get_file_list(manifest_path):
     try:
         cur.execute(sql)
     except sqlite3.DatabaseError:
-        logging.critical("Manifest.db is not a sqlite database; possibly encrypted.")
+        logging.critical("manifest.db is not a sqlite database; possibly encrypted.")
         logging.info("Exiting..")
         exit(1)
 
